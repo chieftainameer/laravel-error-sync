@@ -16,6 +16,7 @@ class ErrorCaptureService
     protected bool $isCapturing = false;
     // Add property:
     protected ?string $screenshot = null;
+    protected ?string $screenshotDiagnostic = null;
 
     public function __construct(
         protected RelayClient $relay,
@@ -147,6 +148,11 @@ class ErrorCaptureService
         $this->screenshot = $screenshot;
     }
 
+    public function setScreenshotDiagnostic(?string $diagnostic): void
+    {
+        $this->screenshotDiagnostic = $diagnostic;
+    }
+
     // Update captureAndSend to pass screenshot to builder:
     public function captureAndSend(string $trigger = 'manual'): array
     {
@@ -165,6 +171,7 @@ class ErrorCaptureService
                 userActions: $this->userActions,
                 consoleLogs: $this->consoleLogs,
                 screenshot: $this->screenshot,
+                screenshotDiagnostic: $this->screenshotDiagnostic,
             );
 
             // === ALWAYS SAVE LOCALLY ===
@@ -178,6 +185,7 @@ class ErrorCaptureService
 
             // Clear screenshot after use
             $this->screenshot = null;
+            $this->screenshotDiagnostic = null;
 
             return [
                 'success' => $sent,
@@ -188,6 +196,7 @@ class ErrorCaptureService
             ];
         } catch (\Throwable $e) {
             $this->screenshot = null;
+            $this->screenshotDiagnostic = null;
             return ['success' => false, 'error' => $e->getMessage()];
         } finally {
             $this->isCapturing = false;

@@ -49,6 +49,9 @@ class ErrorCaptureController extends Controller
             $service->setScreenshot($screenshot);
         }
 
+        $service->setScreenshotDiagnostic(
+            $request->input('screenshotDiagnostic', 'No client diagnostic provided')
+        );
         $service->logConsole(
             'info',
             '[ErrorSync Screenshot] ' . $request->input('screenshotDiagnostic', 'No client diagnostic provided')

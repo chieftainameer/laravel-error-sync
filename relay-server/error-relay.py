@@ -121,11 +121,16 @@ class ErrorRelayHandler(BaseHTTPRequestHandler):
         if not screenshot_data:
             print("   [SCREENSHOT] No screenshot was included in the payload")
 
-        for console_entry in payload.get('consoleLogs', []):
-            message = console_entry.get('message', '') if isinstance(console_entry, dict) else ''
-            if message.startswith('[ErrorSync Screenshot]'):
-                diagnostic = message[len('[ErrorSync Screenshot]'):].strip()
-                print(f"   [SCREENSHOT] Client diagnostic: {diagnostic}")
+        if payload.get('screenshotDiagnostic'):
+            print(f"   [SCREENSHOT] Client diagnostic: {payload['screenshotDiagnostic']}")
+
+        if not payload.get('screenshotDiagnostic'):
+            for console_entry in payload.get('consoleLogs', []):
+                message = console_entry.get('message', '') if isinstance(console_entry, dict) else ''
+                marker = '[ErrorSync Screenshot]'
+                if marker in message:
+                    diagnostic = message.split(marker, 1)[1].strip()
+                    print(f"   [SCREENSHOT] Client diagnostic: {diagnostic}")
         
         if screenshot_data:
             try:
@@ -271,7 +276,12 @@ class ErrorRelayHandler(BaseHTTPRequestHandler):
             errors.append(str(exc))
 
         if sys.platform == 'win32':
-            commands = [['clip.exe']]
+            try:
+                subprocess.run(['clip.exe'], input=text.encode('utf-16le'), check=True, timeout=5)
+                return True, ""
+            except Exception as exc:
+                errors.append(f"clip.exe: {exc}")
+            commands = []
         elif sys.platform == 'darwin':
             commands = [['pbcopy']]
         else:

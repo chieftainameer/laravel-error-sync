@@ -9,14 +9,14 @@
     <script>
         window.__errorSyncConfig = {
             screenshot: {{ config('error-sync.collect.screenshot', false) ? 'true' : 'false' }},
-            html2canvasUrl: @json(asset('vendor/error-sync/vendor/html2canvas.min.js')),
+            html2canvasUrl: '/vendor/error-sync/vendor/html2canvas.min.js',
         };
     </script>
 
     {{-- html2canvas for screenshots --}}
     @if(config('error-sync.collect.screenshot', false))
         <script
-            src="{{ asset('vendor/error-sync/vendor/html2canvas.min.js') }}"
+            src="/vendor/error-sync/vendor/html2canvas.min.js"
             onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'"
         ></script>
     @endif
