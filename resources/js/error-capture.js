@@ -45,26 +45,7 @@
             }
         }
 
-        // Method 3: Manual DOM capture (fallback — captures visible text only)
-        try {
-            const snapshot = {
-                url: window.location.href,
-                title: document.title,
-                viewport: {
-                    width: window.innerWidth,
-                    height: window.innerHeight,
-                },
-                visibleText: document.body?.innerText?.substring(0, 2000) || 'No content',
-                errorElements: Array.from(document.querySelectorAll('.error, .exception, [style*="color: red"]'))
-                    .map(el => ({
-                        tag: el.tagName,
-                        text: el.textContent?.trim().substring(0, 200),
-                    })),
-            };
-            return 'data:application/json;base64,' + btoa(JSON.stringify(snapshot));
-        } catch (e) {
-            return null;
-        }
+        return null;
     }
 
     // ==========================================
@@ -244,19 +225,28 @@
                 screenshot = await captureScreenshot();
                 if (screenshot) {
                     flash('📸 Screenshot captured!', 'info');
+                } else {
+                    flash('⚠️ Screenshot library unavailable; sending error details only', 'warning');
                 }
             }
             
             // Send everything to backend
             const response = await fetch(ENDPOINTS.capture, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                },
                 body: JSON.stringify({ 
                     trigger,
                     screenshot: screenshot,
                 }),
             });
             
+            if (!response.ok) {
+                throw new Error(`Capture request failed (${response.status})`);
+            }
+
             const result = await response.json();
             
             if (result.success) {

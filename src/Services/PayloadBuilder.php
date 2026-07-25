@@ -87,10 +87,7 @@ class PayloadBuilder
 
         // Add screenshot if present
         if ($screenshot && config('error-sync.collect.screenshot', true)) {
-            // Limit size — base64 can be huge
-            if (strlen($screenshot) > 500000) { // ~500KB
-                $screenshot = substr($screenshot, 0, 500000);
-            }
+            // Keep the data URI intact; cutting base64 makes the image unreadable.
             $payload['screenshot'] = $screenshot;
         }
 

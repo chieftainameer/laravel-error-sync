@@ -4,7 +4,7 @@ NativePHP Error Sync Relay Server
 Receives error payloads from mobile devices and formats them for AI agents.
 
 Usage:
-    python error-relay.py --port 9999 --output ~/agent-errors
+    python error-relay.py --port 9999 --output ./storage/agent-errors
     pip install -r requirements.txt  # for clipboard support
 """
 
@@ -15,6 +15,7 @@ import os
 import re
 import socket
 import sys
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -27,7 +28,9 @@ if sys.platform == 'win32':
 
 
 class ErrorRelayHandler(BaseHTTPRequestHandler):
-    output_dir = Path.home() / "agent-errors"
+    output_dir = Path.cwd() / "storage" / "agent-errors"
+    clipboard_enabled = True
+    embed_screenshots = True
     
     def do_GET(self):
         if self.path == '/ping':
@@ -101,7 +104,7 @@ class ErrorRelayHandler(BaseHTTPRequestHandler):
         body = self.rfile.read(content_length)
         payload = json.loads(body)
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         trigger = payload.get('trigger', 'unknown')
         app_name = self.headers.get('X-App-Name', 'Unknown')
         error_msg = payload.get('error', 'Unknown error')[:120]
@@ -119,12 +122,12 @@ class ErrorRelayHandler(BaseHTTPRequestHandler):
             try:
                 # Handle data URI format: data:image/jpeg;base64,...
                 if isinstance(screenshot_data, str) and screenshot_data.startswith('data:image'):
-                    match = re.match(r'data:image/(\w+);base64,(.+)', screenshot_data)
+                    match = re.fullmatch(r'data:image/([a-zA-Z0-9.+-]+);base64,(.+)', screenshot_data, re.DOTALL)
                     if match:
                         img_format = match.group(1)
                         if img_format == 'jpeg':
                             img_format = 'jpg'
-                        img_data = base64.b64decode(match.group(2))
+                        img_data = base64.b64decode(match.group(2), validate=True)
                         
                         screenshot_file = self.output_dir / f"screenshot_{timestamp}.{img_format}"
                         screenshot_file.write_bytes(img_data)
@@ -137,7 +140,7 @@ class ErrorRelayHandler(BaseHTTPRequestHandler):
                 # Handle raw base64
                 elif isinstance(screenshot_data, str) and len(screenshot_data) > 100:
                     try:
-                        img_data = base64.b64decode(screenshot_data)
+                        img_data = base64.b64decode(screenshot_data, validate=True)
                         screenshot_file = self.output_dir / f"screenshot_{timestamp}.png"
                         screenshot_file.write_bytes(img_data)
                         screenshot_path = str(screenshot_file)
@@ -187,12 +190,9 @@ class ErrorRelayHandler(BaseHTTPRequestHandler):
         # TRY TO COPY TO CLIPBOARD
         # =============================================
         clipboard_status = ""
-        try:
-            import pyperclip
-            pyperclip.copy(md)
-            clipboard_status = "[OK] Copied to clipboard"
-        except ImportError:
-            clipboard_status = ""
+        if self.clipboard_enabled:
+            copied, clipboard_error = self._copy_to_clipboard(md)
+            clipboard_status = "[OK] Copied to clipboard" if copied else f"[WARN] Clipboard copy failed: {clipboard_error}"
         
         # =============================================
         # PRINT SUMMARY
@@ -247,6 +247,33 @@ class ErrorRelayHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(response_data, ensure_ascii=False).encode('utf-8'))
+
+    @staticmethod
+    def _copy_to_clipboard(text):
+        """Copy text using pyperclip, then an OS-native clipboard command."""
+        errors = []
+        try:
+            import pyperclip
+            pyperclip.copy(text)
+            return True, ""
+        except Exception as exc:
+            errors.append(str(exc))
+
+        if sys.platform == 'win32':
+            commands = [['clip.exe']]
+        elif sys.platform == 'darwin':
+            commands = [['pbcopy']]
+        else:
+            commands = [['wl-copy'], ['xclip', '-selection', 'clipboard'], ['xsel', '--clipboard', '--input']]
+
+        for command in commands:
+            try:
+                subprocess.run(command, input=text, text=True, check=True, timeout=5)
+                return True, ""
+            except Exception as exc:
+                errors.append(f"{command[0]}: {exc}")
+
+        return False, '; '.join(errors) or 'no clipboard provider available'
     
     def do_OPTIONS(self):
         self.send_response(200)
@@ -299,7 +326,7 @@ class ErrorRelayHandler(BaseHTTPRequestHandler):
         # SCREENSHOT (EMBEDDED AS BASE64)
         # ==========================================
         if screenshot_path:
-            b64_uri = self._get_screenshot_base64(screenshot_path)
+            b64_uri = self._get_screenshot_base64(screenshot_path) if self.embed_screenshots else None
             if b64_uri:
                 lines.append("## Screenshot")
                 lines.append(f"![Screenshot]({b64_uri})")
@@ -510,8 +537,8 @@ def main():
     parser.add_argument(
         '--output', 
         type=str, 
-        default=str(Path.home() / 'agent-errors'), 
-        help='Output directory for error reports (default: ~/agent-errors)'
+        default=str(Path.cwd() / 'storage' / 'agent-errors'),
+        help='Output directory for error reports (default: ./storage/agent-errors)'
     )
     parser.add_argument(
         '--no-clipboard',
@@ -528,6 +555,8 @@ def main():
     # Expand user path
     output_path = Path(os.path.expanduser(args.output))
     ErrorRelayHandler.output_dir = output_path
+    ErrorRelayHandler.clipboard_enabled = not args.no_clipboard
+    ErrorRelayHandler.embed_screenshots = not args.no_embed
     
     ip = get_local_ip()
     

@@ -45,7 +45,7 @@ return [
     'relay_server' => [
         'port' => env('ERROR_SYNC_RELAY_PORT', 9999),
         'host' => '0.0.0.0',
-        'output_dir' => env('HOME') . '/agent-errors',
+        'output_dir' => env('ERROR_SYNC_OUTPUT_DIR', storage_path('agent-errors')),
         'auto_start' => env('ERROR_SYNC_AUTO_START', false),
         'auto_stop' => env('ERROR_SYNC_AUTO_STOP', true),
     ],

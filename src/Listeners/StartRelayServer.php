@@ -32,7 +32,7 @@ class StartRelayServer
         }
         
         $port = config('error-sync.relay_server.port', 9999);
-        $output = config('error-sync.relay_server.output_dir', getenv('HOME') . '/agent-errors');
+        $output = config('error-sync.relay_server.output_dir') ?: storage_path('agent-errors');
         $python = self::findPython();
         
         if (!$python) {

@@ -121,7 +121,7 @@ NativePHP WebView / Laravel application
   -> POST /_error-sync/capture
   -> writes {Laravel local disk}/error-sync/latest.{json,md}
   -> POST {ERROR_SYNC_RELAY_URL}/error
-  -> optional Python relay writes ~/agent-errors/latest.md
+  -> optional Python relay writes storage/agent-errors/latest.md
 ```
 
 PHP error handling and Laravel error/critical log events can initiate an automatic capture. The browser asset buffers JavaScript errors, console entries, network activity, and user actions until a full capture is triggered.
@@ -212,7 +212,7 @@ Screenshot capture tries these methods in order:
 You can also run the published relay directly:
 
 ```bash
-python error-relay/error-relay.py --port 9999 --output ~/agent-errors
+python error-relay/error-relay.py --port 9999 --output storage/agent-errors
 ```
 
 Install its optional clipboard dependency with:
@@ -231,7 +231,7 @@ The relay exposes:
 
 ## Report locations
 
-Every capture is stored in the Laravel project's filesystem. `~/agent-errors` is **not** the package's primary storage directory; it is used only when the separate Python relay receives the report.
+Every capture is stored in the Laravel project's filesystem. By default, the separate Python relay also writes its copies and screenshots to `storage/agent-errors` in the target project.
 
 Local reports use `error-sync.local_backup.disk`, which defaults to Laravel's `local` filesystem disk. Depending on the Laravel version and application filesystem configuration, its physical root is commonly `storage/app` or `storage/app/private`. The report paths relative to that disk are:
 
@@ -248,13 +248,13 @@ error-sync/
 
 
 ```text
-~/agent-errors/
+storage/agent-errors/
 ├── latest.md
 ├── error_YYYY-MM-DD_HH-MM-SS.json
 └── screenshot_YYYY-MM-DD_HH-MM-SS.jpg
 ```
 
-Use `php artisan error-sync:list --latest` to locate and inspect the project-local report without assuming the filesystem disk's physical root. Point your AI coding tool at that disk's `error-sync/latest.md`, or at `~/agent-errors/latest.md` when you intentionally use the relay copy.
+Use `php artisan error-sync:list --latest` to locate and inspect the project-local report without assuming the filesystem disk's physical root. Point your AI coding tool at that disk's `error-sync/latest.md`, or at `storage/agent-errors/latest.md` when you use the relay copy.
 
 ## Configuration
 
@@ -324,7 +324,7 @@ return [
     'relay_server' => [
         'port' => env('ERROR_SYNC_RELAY_PORT', 9999),
         'host' => '0.0.0.0',
-        'output_dir' => env('HOME').'/agent-errors',
+        'output_dir' => env('ERROR_SYNC_OUTPUT_DIR', storage_path('agent-errors')),
         'auto_start' => env('ERROR_SYNC_AUTO_START', false),
         'auto_stop' => env('ERROR_SYNC_AUTO_STOP', true),
     ],
@@ -372,7 +372,7 @@ Check that `APP_ENV` is `local` or `development`, or add the current environment
 
 ### Screenshots are missing
 
-Confirm `collect.screenshot` is enabled and that `public/vendor/error-sync/vendor/html2canvas.min.js` exists. If it was not bundled during installation, provide that asset yourself or rely on the NativePHP screenshot bridge/fallback snapshot.
+Confirm `collect.screenshot` is enabled. The component loads `public/vendor/error-sync/vendor/html2canvas.min.js` first and falls back to the pinned CDN build when that local asset is absent. For offline mobile development, provide the local asset.
 
 ### Reports are saved locally but the UI says sync failed
 

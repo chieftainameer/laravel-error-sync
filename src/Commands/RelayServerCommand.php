@@ -10,13 +10,17 @@ class RelayServerCommand extends Command
 {
     protected $signature = 'error-sync:relay 
                             {--port=9999 : Port to listen on}
-                            {--output=~/agent-errors : Output directory}';
+                            {--output= : Output directory (defaults to storage/agent-errors)}';
     protected $description = 'Start the error relay server on your development machine';
 
     public function handle(): int
     {
         $port = $this->option('port');
-        $output = str_replace('~', getenv('HOME'), $this->option('output'));
+        $output = $this->option('output') ?: storage_path('agent-errors');
+        $home = getenv('HOME') ?: getenv('USERPROFILE') ?: '';
+        if ($home !== '' && str_starts_with($output, '~')) {
+            $output = $home . substr($output, 1);
+        }
 
         $relayScript = base_path('error-relay/error-relay.py');
 
