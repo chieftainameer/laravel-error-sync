@@ -9,6 +9,7 @@
     <script>
         window.__errorSyncConfig = {
             screenshot: {{ config('error-sync.collect.screenshot', false) ? 'true' : 'false' }},
+            html2canvasUrl: @json(asset('vendor/error-sync/vendor/html2canvas.min.js')),
         };
     </script>
 

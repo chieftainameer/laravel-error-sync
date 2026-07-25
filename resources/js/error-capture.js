@@ -3,6 +3,7 @@
     'use strict';
 
     let screenshotDiagnostic = 'not attempted';
+    let screenshotLibraryPromise = null;
 
     const ENDPOINTS = {
         jsError: '/_error-sync/js-error',
@@ -23,6 +24,11 @@
      */
     async function captureScreenshot() {
         screenshotDiagnostic = 'capture started';
+
+        if (typeof window.html2canvas !== 'function') {
+            await ensureScreenshotLibrary();
+        }
+
         console.info('[ErrorSync] Screenshot capture requested', {
             html2canvas: typeof window.html2canvas === 'function',
             nativeBridge: typeof window.NativePHP?.captureScreenshot === 'function',
@@ -62,8 +68,65 @@
             }
         }
 
-        screenshotDiagnostic = `no capture provider (html2canvas: ${typeof window.html2canvas})`;
+        if (!screenshotDiagnostic.startsWith('screenshot library unavailable')) {
+            screenshotDiagnostic = `no capture provider (html2canvas: ${typeof window.html2canvas})`;
+        }
         return null;
+    }
+
+    /**
+     * Load html2canvas on demand and wait for it before attempting capture.
+     * This is more reliable in compiled WebViews than assuming the parser-time
+     * script tag has finished loading.
+     */
+    async function ensureScreenshotLibrary() {
+        if (typeof window.html2canvas === 'function') {
+            return true;
+        }
+
+        if (screenshotLibraryPromise) {
+            return screenshotLibraryPromise;
+        }
+
+        screenshotLibraryPromise = (async () => {
+            const localUrl = window.__errorSyncConfig?.html2canvasUrl
+                || '/vendor/error-sync/vendor/html2canvas.min.js';
+            const urls = [
+                localUrl,
+                'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+            ];
+            const failures = [];
+
+            for (const url of urls) {
+                try {
+                    await loadScript(url);
+                    if (typeof window.html2canvas === 'function') {
+                        screenshotDiagnostic = `html2canvas loaded from ${url}`;
+                        return true;
+                    }
+                    failures.push(`${url}: loaded without exposing html2canvas`);
+                } catch (error) {
+                    failures.push(`${url}: ${error.message}`);
+                }
+            }
+
+            screenshotDiagnostic = `screenshot library unavailable; ${failures.join('; ')}`;
+            console.warn('[ErrorSync] ' + screenshotDiagnostic);
+            return false;
+        })();
+
+        return screenshotLibraryPromise;
+    }
+
+    function loadScript(url) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = url;
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('script request failed'));
+            document.head.appendChild(script);
+        });
     }
 
     // ==========================================
