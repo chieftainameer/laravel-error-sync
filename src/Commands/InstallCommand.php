@@ -9,8 +9,7 @@ use Illuminate\Support\Str;
 
 class InstallCommand extends Command
 {
-    protected $signature = 'error-sync:install 
-                            {--no-interaction : Skip interactive prompts}
+    protected $signature = 'error-sync:install
                             {--layout= : Layout file to add dev tools to}';
     protected $description = 'Install and configure Error Sync for NativePHP';
 
