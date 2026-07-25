@@ -310,8 +310,8 @@ class InstallCommand extends Command
 
     protected function updateEnvFile(string $key, string $value): void
     {
-        $envPath = base_path('.env');
-        
+        $envPath = $this->resolveEnvPath();
+
         if (!File::exists($envPath)) {
             File::put($envPath, "{$key}={$value}\n");
             return;
@@ -333,6 +333,22 @@ class InstallCommand extends Command
         }
 
         File::put($envPath, $content);
+    }
+
+    protected function resolveEnvPath(): string
+    {
+        $app = $this->laravel;
+
+        if ($app instanceof \Illuminate\Contracts\Foundation\Application) {
+            $environmentPath = $app->environmentPath();
+            $environmentFile = $app->environmentFile();
+
+            if ($environmentFile) {
+                return $environmentPath . DIRECTORY_SEPARATOR . $environmentFile;
+            }
+        }
+
+        return base_path('.env');
     }
 
     // ============================================
