@@ -459,7 +459,7 @@ class InstallCommand extends Command
 
     protected function injectDevTools(string $layoutPath): void
     {
-        $fullPath = resource_path('views/' . $layoutPath);
+        $fullPath = $this->resolveLayoutPath($layoutPath);
 
         if (!File::exists($fullPath)) {
             $this->warn("Layout not found: {$layoutPath}");
@@ -501,6 +501,19 @@ class InstallCommand extends Command
     // ============================================
     // STEP 4: CHECK PYTHON
     // ============================================
+
+    protected function resolveLayoutPath(string $layoutPath): string
+    {
+        if (str_starts_with($layoutPath, DIRECTORY_SEPARATOR)) {
+            return $layoutPath;
+        }
+
+        if (strlen($layoutPath) >= 2 && ctype_alpha($layoutPath[0]) && $layoutPath[1] === ':') {
+            return $layoutPath;
+        }
+
+        return resource_path('views/' . $layoutPath);
+    }
 
     protected function checkPython(): void
     {
