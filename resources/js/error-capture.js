@@ -2,6 +2,8 @@
 (function() {
     'use strict';
 
+    let screenshotDiagnostic = 'not attempted';
+
     const ENDPOINTS = {
         jsError: '/_error-sync/js-error',
         network: '/_error-sync/network',
@@ -20,18 +22,30 @@
      * Uses html2canvas if available, falls back to a manual DOM snapshot.
      */
     async function captureScreenshot() {
+        screenshotDiagnostic = 'capture started';
+        console.info('[ErrorSync] Screenshot capture requested', {
+            html2canvas: typeof window.html2canvas === 'function',
+            nativeBridge: typeof window.NativePHP?.captureScreenshot === 'function',
+        });
+
         // Method 1: html2canvas (best quality)
         if (window.html2canvas) {
             try {
                 const canvas = await html2canvas(document.body, {
                     useCORS: true,
-                    allowTaint: true,
+                    // A tainted canvas cannot be exported with toDataURL. Skip
+                    // inaccessible cross-origin images instead of losing the
+                    // entire screenshot.
+                    allowTaint: false,
                     scale: 0.5,           // Half resolution for smaller payload
                     logging: false,
                     backgroundColor: '#ffffff',
                 });
-                return canvas.toDataURL('image/jpeg', 0.6); // JPEG for smaller size
+                const image = canvas.toDataURL('image/jpeg', 0.6);
+                screenshotDiagnostic = `html2canvas captured ${image.length} characters`;
+                return image; // JPEG for smaller size
             } catch (e) {
+                screenshotDiagnostic = `html2canvas failed: ${e.message}`;
                 console.warn('[ErrorSync] html2canvas failed:', e.message);
             }
         }
@@ -39,12 +53,16 @@
         // Method 2: NativePHP native snapshot (if available)
         if (window.NativePHP?.captureScreenshot) {
             try {
-                return await window.NativePHP.captureScreenshot();
+                const image = await window.NativePHP.captureScreenshot();
+                screenshotDiagnostic = image ? 'NativePHP bridge captured screenshot' : 'NativePHP bridge returned no image';
+                return image;
             } catch (e) {
+                screenshotDiagnostic = `NativePHP bridge failed: ${e.message}`;
                 console.warn('[ErrorSync] Native snapshot failed:', e.message);
             }
         }
 
+        screenshotDiagnostic = `no capture provider (html2canvas: ${typeof window.html2canvas})`;
         return null;
     }
 
@@ -240,6 +258,7 @@
                 body: JSON.stringify({ 
                     trigger,
                     screenshot: screenshot,
+                    screenshotDiagnostic,
                 }),
             });
             
@@ -248,6 +267,11 @@
             }
 
             const result = await response.json();
+
+            console.info('[ErrorSync] Capture completed', {
+                screenshotCaptured: Boolean(screenshot),
+                relayAccepted: Boolean(result.success),
+            });
             
             if (result.success) {
                 flash('✅ Error synced to laptop!', 'success');
@@ -290,21 +314,40 @@
             warning: '#f59e0b', 
             error: '#ef4444' 
         };
+
+        let container = document.getElementById('error-sync-toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'error-sync-toast-container';
+            container.style.cssText = `
+                position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+                z-index: 99999; display: flex; flex-direction: column;
+                align-items: center; gap: 10px; width: min(92vw, 520px);
+                pointer-events: none;
+            `;
+            document.body.appendChild(container);
+        }
+
         const el = document.createElement('div');
         el.style.cssText = `
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
             background: ${colors[type] || colors.info}; color: white;
-            padding: 12px 24px; border-radius: 8px; z-index: 99999;
+            padding: 12px 24px; border-radius: 8px;
             font-family: system-ui, sans-serif; font-size: 14px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            transition: opacity 0.3s ease;
-            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            max-width: 100%; box-sizing: border-box; text-align: center;
         `;
         el.textContent = msg;
-        document.body.appendChild(el);
+        container.appendChild(el);
         setTimeout(() => {
             el.style.opacity = '0';
-            setTimeout(() => el.remove(), 300);
+            el.style.transform = 'translateY(-6px)';
+            setTimeout(() => {
+                el.remove();
+                if (!container.children.length) {
+                    container.remove();
+                }
+            }, 300);
         }, 2500);
     }
 

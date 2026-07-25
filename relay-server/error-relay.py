@@ -117,6 +117,15 @@ class ErrorRelayHandler(BaseHTTPRequestHandler):
         # =============================================
         screenshot_path = ""
         screenshot_data = payload.get('screenshot')
+
+        if not screenshot_data:
+            print("   [SCREENSHOT] No screenshot was included in the payload")
+
+        for console_entry in payload.get('consoleLogs', []):
+            message = console_entry.get('message', '') if isinstance(console_entry, dict) else ''
+            if message.startswith('[ErrorSync Screenshot]'):
+                diagnostic = message[len('[ErrorSync Screenshot]'):].strip()
+                print(f"   [SCREENSHOT] Client diagnostic: {diagnostic}")
         
         if screenshot_data:
             try:
@@ -238,6 +247,8 @@ class ErrorRelayHandler(BaseHTTPRequestHandler):
             'status': 'received',
             'timestamp': timestamp,
             'file': str(latest_file),
+            'screenshot_received': bool(screenshot_data),
+            'screenshot_saved': bool(screenshot_path),
         }
         if screenshot_path:
             response_data['screenshot'] = str(screenshot_path)

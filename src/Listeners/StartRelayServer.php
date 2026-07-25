@@ -13,22 +13,22 @@ class StartRelayServer
     /**
      * Start the relay server if it's not already running.
      */
-    public static function start(): void
+    public static function start(): bool
     {
         // Only in local/development
         if (!app()->environment(config('error-sync.environments', ['local', 'development']))) {
-            return;
+            return false;
         }
         
         // Check if already running
         if (self::isRunning()) {
-            return;
+            return false;
         }
         
         $relayScript = base_path('error-relay/error-relay.py');
         
         if (!file_exists($relayScript)) {
-            return;
+            return false;
         }
         
         $port = config('error-sync.relay_server.port', 9999);
@@ -36,10 +36,12 @@ class StartRelayServer
         $python = self::findPython();
         
         if (!$python) {
-            return;
+            return false;
         }
         
-        self::$process = new Process([$python, $relayScript, '--port', $port, '--output', $output]);
+        // -u is important here: the relay runs behind a pipe, where Python would
+        // otherwise buffer screenshot and request diagnostics indefinitely.
+        self::$process = new Process([$python, '-u', $relayScript, '--port', $port, '--output', $output]);
         self::$process->setTimeout(null);
         self::$process->start();
         
@@ -48,7 +50,10 @@ class StartRelayServer
         
         if (self::$process->isRunning()) {
             Log::info("Error Sync relay server started on port {$port}");
+            return true;
         }
+
+        return false;
     }
     
     /**
@@ -60,6 +65,20 @@ class StartRelayServer
             self::$process->stop(2);
             self::$process = null;
         }
+    }
+
+    /**
+     * Return output produced by the asynchronously running relay since the
+     * previous call. Commands must drain this periodically to display it.
+     */
+    public static function drainOutput(): string
+    {
+        if (!self::$process) {
+            return '';
+        }
+
+        return self::$process->getIncrementalOutput()
+            . self::$process->getIncrementalErrorOutput();
     }
     
     /**

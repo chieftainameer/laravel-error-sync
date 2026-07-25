@@ -19,8 +19,16 @@ class SyncCommand extends Command
         
         // 1. Start relay server
         $this->line('[1/2] Starting relay server...');
-        StartRelayServer::start();
-        $this->info('[OK] Relay server running on port ' . config('error-sync.relay_server.port', 9999));
+        $relayStarted = StartRelayServer::start();
+        $relayOutput = StartRelayServer::drainOutput();
+        if ($relayOutput !== '') {
+            $this->output->write($relayOutput);
+        }
+        if ($relayStarted) {
+            $this->info('[OK] Relay server running on port ' . config('error-sync.relay_server.port', 9999));
+        } else {
+            $this->warn('[!] Relay was already running or could not be started. Live relay diagnostics are only available when this command starts it.');
+        }
         
         // 2. Start watching (unless --no-watch)
         if (!$this->option('no-watch')) {

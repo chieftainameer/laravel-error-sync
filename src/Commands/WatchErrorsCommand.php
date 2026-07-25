@@ -6,6 +6,7 @@ namespace NativePHP\ErrorSync\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use NativePHP\ErrorSync\Listeners\StartRelayServer;
 
 class WatchErrorsCommand extends Command
 {
@@ -42,6 +43,11 @@ class WatchErrorsCommand extends Command
         }
 
         while (true) {
+            $relayOutput = StartRelayServer::drainOutput();
+            if ($relayOutput !== '') {
+                $this->output->write($relayOutput);
+            }
+
             clearstatcache(true, $latestFile);
 
             if (File::exists($latestFile)) {
