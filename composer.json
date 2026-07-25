@@ -1,0 +1,54 @@
+{
+    "name": "nativephp/error-sync",
+    "description": "Effortlessly sync mobile app errors from NativePHP to your AI coding agent",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Your Name",
+            "email": "you@example.com"
+        }
+    ],
+    "keywords": [
+        "nativephp",
+        "error-tracking",
+        "debugging",
+        "ai-coding",
+        "mobile-development"
+    ],
+    "require": {
+        "php": "^8.3",
+        "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/http": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/console": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/filesystem": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/routing": "^10.0|^11.0|^12.0|^13.0",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "phpunit/phpunit": "^10.0|^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "NativePHP\\ErrorSync\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NativePHP\\ErrorSync\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "NativePHP\\ErrorSync\\ErrorSyncServiceProvider"
+            ],
+            "aliases": {
+                "ErrorSync": "NativePHP\\ErrorSync\\Facades\\ErrorSync"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
