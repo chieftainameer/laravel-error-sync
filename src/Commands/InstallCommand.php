@@ -213,63 +213,62 @@ class InstallCommand extends Command
     {
         $ips = [];
 
-        // Method 1: Try socket connection
+        // Method 1: Try socket connection and prefer a non-loopback address.
         try {
             $socket = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
             if ($socket) {
                 socket_connect($socket, '8.8.8.8', 80);
                 socket_getsockname($socket, $ip);
                 socket_close($socket);
-                if ($ip && $ip !== '127.0.0.1') {
+                if ($ip && $ip !== '127.0.0.1' && !in_array($ip, $ips)) {
                     $ips[] = $ip;
                 }
             }
         } catch (\Throwable) {}
 
-        // Method 2: Try hostname -I (Linux/macOS)
-        try {
-            $output = shell_exec('hostname -I 2>/dev/null');
-            if ($output) {
-                foreach (explode(' ', trim($output)) as $ip) {
-                    $ip = trim($ip);
-                    if ($ip && !in_array($ip, $ips) && $ip !== '127.0.0.1') {
-                        $ips[] = $ip;
-                    }
-                }
-            }
-        } catch (\Throwable) {}
-
-        // Method 3: Try ipconfig (Windows)
-        try {
-            $output = shell_exec('ipconfig 2>/dev/null');
-            if ($output) {
-                preg_match_all('/IPv4 Address[.\s]*: ([\d.]+)/', $output, $matches);
-                if (!empty($matches[1])) {
+        // Method 2: Try Windows ipconfig without emitting noisy shell errors.
+        if (PHP_OS_FAMILY === 'Windows') {
+            try {
+                $output = shell_exec('ipconfig 2>nul');
+                if ($output) {
+                    preg_match_all('/IPv4 Address[.\s]*: ([\d.]+)/', $output, $matches);
                     foreach ($matches[1] as $ip) {
                         if (!in_array($ip, $ips) && $ip !== '127.0.0.1') {
                             $ips[] = $ip;
                         }
                     }
                 }
-            }
-        } catch (\Throwable) {}
+            } catch (\Throwable) {}
+        }
 
-        // Method 4: Try ifconfig (macOS/Linux)
-        try {
-            $output = shell_exec('ifconfig 2>/dev/null');
-            if ($output) {
-                preg_match_all('/inet ([\d.]+)/', $output, $matches);
-                if (!empty($matches[1])) {
+        // Method 3: Try hostname -I on Unix-like systems.
+        if (PHP_OS_FAMILY !== 'Windows') {
+            try {
+                $output = shell_exec('hostname -I 2>/dev/null');
+                if ($output) {
+                    foreach (explode(' ', trim($output)) as $ip) {
+                        $ip = trim($ip);
+                        if ($ip && !in_array($ip, $ips) && $ip !== '127.0.0.1') {
+                            $ips[] = $ip;
+                        }
+                    }
+                }
+            } catch (\Throwable) {}
+
+            try {
+                $output = shell_exec('ifconfig 2>/dev/null');
+                if ($output) {
+                    preg_match_all('/inet ([\d.]+)/', $output, $matches);
                     foreach ($matches[1] as $ip) {
                         if (!in_array($ip, $ips) && $ip !== '127.0.0.1') {
                             $ips[] = $ip;
                         }
                     }
                 }
-            }
-        } catch (\Throwable) {}
+            } catch (\Throwable) {}
+        }
 
-        // Fallback: include localhost
+        // Fallback: include localhost.
         if (empty($ips)) {
             $ips[] = '127.0.0.1';
         }
