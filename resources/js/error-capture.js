@@ -75,7 +75,7 @@
             }
         }
 
-        if (!screenshotDiagnostic.startsWith('screenshot library unavailable')) {
+        if (screenshotDiagnostic === 'capture started') {
             screenshotDiagnostic = `no capture provider (html2canvas: ${typeof window.html2canvas})`;
         }
         return null;
@@ -100,7 +100,7 @@
                 || '/vendor/error-sync/vendor/html2canvas.min.js';
             const urls = [
                 localUrl,
-                'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+                'https://cdn.jsdelivr.net/npm/html2canvas-pro@2.0.2/dist/html2canvas-pro.min.js',
             ];
             const failures = [];
 

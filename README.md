@@ -372,7 +372,7 @@ Check that `APP_ENV` is `local` or `development`, or add the current environment
 
 ### Screenshots are missing
 
-Confirm `collect.screenshot` is enabled. The component loads `public/vendor/error-sync/vendor/html2canvas.min.js` first and falls back to the pinned CDN build when that local asset is absent. For offline mobile development, provide the local asset.
+Confirm `collect.screenshot` is enabled. The component embeds the bundled html2canvas-pro compatibility build, which supports modern `lab()`, `oklab()`, `lch()`, and `oklch()` colors. The published filename remains `html2canvas.min.js` for backward compatibility.
 
 ### Reports are saved locally but the UI says sync failed
 

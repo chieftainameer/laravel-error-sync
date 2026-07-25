@@ -83,7 +83,8 @@ class InstallCommand extends Command
             $this->steps[] = 'JS published: public/vendor/error-sync/error-capture.js';
         }
 
-        // Copy html2canvas
+        // Copy the html2canvas-pro compatibility build (published under the
+        // historical filename to avoid breaking existing applications).
         $sourceHtml2canvas = $packagePath . '/resources/js/vendor/html2canvas.min.js';
         if (File::exists($sourceHtml2canvas)) {
             copy($sourceHtml2canvas, $vendorJsDir . '/html2canvas.min.js');
