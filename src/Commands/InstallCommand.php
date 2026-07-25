@@ -340,11 +340,35 @@ class InstallCommand extends Command
         $app = $this->laravel;
 
         if ($app instanceof \Illuminate\Contracts\Foundation\Application) {
-            $environmentPath = $app->environmentPath();
-            $environmentFile = $app->environmentFile();
+            if (method_exists($app, 'environmentFilePath')) {
+                $envPath = $app->environmentFilePath();
+                if ($envPath) {
+                    return $envPath;
+                }
+            }
 
-            if ($environmentFile) {
-                return $environmentPath . DIRECTORY_SEPARATOR . $environmentFile;
+            if (method_exists($app, 'environmentPath') && method_exists($app, 'environmentFile')) {
+                $environmentPath = $app->environmentPath();
+                $environmentFile = $app->environmentFile();
+
+                if ($environmentFile) {
+                    return $environmentPath . DIRECTORY_SEPARATOR . $environmentFile;
+                }
+            }
+        }
+
+        $candidates = [
+            base_path('.env'),
+            base_path('.env.local'),
+        ];
+
+        if ($app instanceof \Illuminate\Contracts\Foundation\Application && method_exists($app, 'environment')) {
+            $candidates[] = base_path('.env.' . $app->environment());
+        }
+
+        foreach ($candidates as $candidate) {
+            if (File::exists($candidate)) {
+                return $candidate;
             }
         }
 
@@ -520,22 +544,45 @@ class InstallCommand extends Command
         $this->line('');
         $this->line('[4/4] Checking Python installation...');
 
-        $python = null;
-        foreach (['python3', 'python'] as $cmd) {
-            $output = shell_exec("{$cmd} --version 2>&1");
+        $python = $this->detectPythonCommand();
+
+        if ($python) {
+            $this->line("  [OK] Found: " . trim($python['output']));
+            $this->steps[] = 'Python detected: ' . trim($python['output']);
+            return;
+        }
+
+        $this->warn('  Python 3 not found. The relay server requires Python 3.');
+        $this->warn('  Install from: https://python.org/downloads/');
+        $this->warnings[] = 'Python 3 required for relay server — download from python.org';
+    }
+
+    protected function detectPythonCommand(): ?array
+    {
+        $candidates = [];
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $candidates[] = ['where.exe python', 'python'];
+            $candidates[] = ['where.exe python3', 'python3'];
+            $candidates[] = ['where.exe py', 'py'];
+        } else {
+            $candidates[] = ['which python3', 'python3'];
+            $candidates[] = ['which python', 'python'];
+        }
+
+        foreach ($candidates as [$command, $label]) {
+            $output = shell_exec("{$command} 2>&1");
+
             if ($output && str_contains($output, 'Python')) {
-                $python = $cmd;
-                $this->line("  [OK] Found: " . trim($output));
-                $this->steps[] = 'Python detected: ' . trim($output);
-                break;
+                return ['command' => $label, 'output' => trim($output)];
+            }
+
+            if ($output && str_contains($output, 'python.exe') || str_contains($output, 'python')) {
+                return ['command' => $label, 'output' => trim($output)];
             }
         }
 
-        if (!$python) {
-            $this->warn('  Python 3 not found. The relay server requires Python 3.');
-            $this->warn('  Install from: https://python.org/downloads/');
-            $this->warnings[] = 'Python 3 required for relay server — download from python.org';
-        }
+        return null;
     }
 
     // ============================================
