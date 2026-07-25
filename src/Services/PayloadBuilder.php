@@ -15,8 +15,7 @@ class PayloadBuilder
         array $networkLog,
         array $userActions,
         array $consoleLogs,
-        ?string $screenshot = null,
-        ?string $screenshotDiagnostic = null
+        ?string $screenshot = null
     ): array {
         $lastError = $this->getLastError($phpErrors, $jsErrors);
 
@@ -90,10 +89,6 @@ class PayloadBuilder
         if ($screenshot && config('error-sync.collect.screenshot', true)) {
             // Keep the data URI intact; cutting base64 makes the image unreadable.
             $payload['screenshot'] = $screenshot;
-        }
-
-        if ($screenshotDiagnostic !== null) {
-            $payload['screenshotDiagnostic'] = $screenshotDiagnostic;
         }
 
         return $payload;

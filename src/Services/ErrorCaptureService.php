@@ -171,8 +171,11 @@ class ErrorCaptureService
                 userActions: $this->userActions,
                 consoleLogs: $this->consoleLogs,
                 screenshot: $this->screenshot,
-                screenshotDiagnostic: $this->screenshotDiagnostic,
             );
+
+            if ($this->screenshotDiagnostic !== null) {
+                $payload['screenshotDiagnostic'] = $this->screenshotDiagnostic;
+            }
 
             // === ALWAYS SAVE LOCALLY ===
             $filename = null;
