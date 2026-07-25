@@ -173,6 +173,13 @@ class ErrorCaptureService
                 screenshot: $this->screenshot,
             );
 
+            // Custom PayloadBuilder subclasses may omit the optional screenshot.
+            // The capture service owns transport, so enforce it on the final
+            // payload after the customizable builder has returned.
+            if ($this->screenshot !== null && config('error-sync.collect.screenshot', true)) {
+                $payload['screenshot'] = $this->screenshot;
+            }
+
             if ($this->screenshotDiagnostic !== null) {
                 $payload['screenshotDiagnostic'] = $this->screenshotDiagnostic;
             }

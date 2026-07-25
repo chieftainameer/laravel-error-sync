@@ -2,6 +2,20 @@
 @php
     $environments = config('error-sync.environments', ['local', 'development']);
     $isDev = app()->environment($environments) || config('error-sync.force_enable', false);
+
+    $html2canvasSource = null;
+    if ($isDev && config('error-sync.collect.screenshot', false)) {
+        $publishedAsset = public_path('vendor/error-sync/vendor/html2canvas.min.js');
+        $packageRoot = dirname((new ReflectionClass(\NativePHP\ErrorSync\ErrorSyncServiceProvider::class))->getFileName(), 2);
+        $packageAsset = $packageRoot . '/resources/js/vendor/html2canvas.min.js';
+
+        foreach ([$publishedAsset, $packageAsset] as $assetPath) {
+            if (is_file($assetPath) && is_readable($assetPath)) {
+                $html2canvasSource = file_get_contents($assetPath);
+                break;
+            }
+        }
+    }
 @endphp
 
 @if($isDev)
@@ -15,15 +29,20 @@
 
     {{-- html2canvas for screenshots --}}
     @if(config('error-sync.collect.screenshot', false))
-        <script
-            src="/vendor/error-sync/vendor/html2canvas.min.js"
-            onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'"
-        ></script>
+        @if($html2canvasSource)
+            {{-- Inline the bundled library so compiled/offline WebViews do not
+                 depend on resolving a public asset URL. --}}
+            <script>{!! $html2canvasSource !!}</script>
+        @else
+            <script>
+                console.error('[ErrorSync] Bundled html2canvas asset could not be read by PHP.');
+            </script>
+        @endif
     @endif
 
     {{-- Floating button --}}
     @if(config('error-sync.triggers.button', true))
-        <button onclick="window.__errorSyncCapture('manual_button')"
+        <button id="error-sync-capture-button" onclick="window.__errorSyncCapture('manual_button')"
             style="position:fixed;bottom:20px;right:20px;z-index:99998;
                    width:50px;height:50px;border-radius:25px;
                    background:#ef4444;color:white;border:none;

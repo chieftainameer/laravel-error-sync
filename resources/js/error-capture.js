@@ -46,6 +46,13 @@
                     scale: 0.5,           // Half resolution for smaller payload
                     logging: false,
                     backgroundColor: '#ffffff',
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    x: window.scrollX,
+                    y: window.scrollY,
+                    ignoreElements: (element) =>
+                        element.id === 'error-sync-capture-button'
+                        || element.id === 'error-sync-toast-container',
                 });
                 const image = canvas.toDataURL('image/jpeg', 0.6);
                 screenshotDiagnostic = `html2canvas captured ${image.length} characters`;
