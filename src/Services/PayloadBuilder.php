@@ -43,9 +43,15 @@ class PayloadBuilder
             $payload['route'] = request()->path();
             $payload['routeName'] = request()->route()?->getName();
             $payload['method'] = request()->method();
-            $payload['input'] = $this->sanitizeInput(request()->except(
-                config('error-sync.sensitive_fields', ['password'])
+            $excludedInput = array_unique(array_merge(
+                config('error-sync.sensitive_fields', ['password']),
+                ['screenshot']
             ));
+            $payload['input'] = $this->sanitizeInput(request()->except($excludedInput));
+
+            if (request()->filled('screenshot')) {
+                $payload['input']['screenshot'] = '[ATTACHED SEPARATELY]';
+            }
         }
 
         if (config('error-sync.collect.session', true)) {

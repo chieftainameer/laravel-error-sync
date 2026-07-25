@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Annotation editor smoke test</title></head>
+<body>
+<div id="result">RUNNING</div>
+<script src="../../resources/js/annotation-editor.js"></script>
+<script>
+    (async () => {
+        try {
+            const pixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+            const pending = window.ErrorSyncAnnotationEditor.open(pixel);
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            const dialog = document.getElementById('error-sync-annotation-editor');
+            if (!dialog || dialog.getAttribute('role') !== 'dialog') throw new Error('dialog missing');
+            const labels = Array.from(dialog.querySelectorAll('button')).map((item) => item.textContent);
+            ['Pen', 'Highlight', 'Arrow', 'Box', 'Text', 'Undo', 'Redo', 'Clear', 'Cancel', 'Retake', 'Send']
+                .forEach((label) => { if (!labels.includes(label)) throw new Error(label + ' missing'); });
+            const canvas = dialog.querySelector('canvas');
+            const rect = canvas.getBoundingClientRect();
+            canvas.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: rect.left, clientY: rect.top }));
+            canvas.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 1, clientX: rect.right, clientY: rect.bottom }));
+            canvas.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1, clientX: rect.right, clientY: rect.bottom }));
+            dialog.querySelector('button[aria-label="Send annotated screenshot"]').click();
+            const result = await pending;
+            if (result.action !== 'send' || result.annotations !== 1 || !result.image.startsWith('data:image/jpeg;base64,')) {
+                throw new Error('annotated export failed');
+            }
+            const cancelPending = window.ErrorSyncAnnotationEditor.open(pixel);
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            document.querySelector('button[aria-label="Cancel report"]').click();
+            const cancelled = await cancelPending;
+            if (cancelled.action !== 'cancel' || document.getElementById('error-sync-annotation-editor')) throw new Error('cancel cleanup failed');
+            document.getElementById('result').textContent = 'PASS';
+        } catch (error) {
+            document.getElementById('result').textContent = 'FAIL: ' + error.message;
+        }
+    })();
+</script>
+</body>
+</html>

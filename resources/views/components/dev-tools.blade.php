@@ -2,16 +2,31 @@
 @php
     $environments = config('error-sync.environments', ['local', 'development']);
     $isDev = app()->environment($environments) || config('error-sync.force_enable', false);
+    $packageRoot = dirname((new ReflectionClass(\NativePHP\ErrorSync\ErrorSyncServiceProvider::class))->getFileName(), 2);
 
     $html2canvasSource = null;
     if ($isDev && config('error-sync.collect.screenshot', false)) {
         $publishedAsset = public_path('vendor/error-sync/vendor/html2canvas.min.js');
-        $packageRoot = dirname((new ReflectionClass(\NativePHP\ErrorSync\ErrorSyncServiceProvider::class))->getFileName(), 2);
         $packageAsset = $packageRoot . '/resources/js/vendor/html2canvas.min.js';
 
         foreach ([$publishedAsset, $packageAsset] as $assetPath) {
             if (is_file($assetPath) && is_readable($assetPath)) {
                 $html2canvasSource = file_get_contents($assetPath);
+                break;
+            }
+        }
+    }
+
+    $annotationEditorSource = null;
+    if ($isDev
+        && config('error-sync.collect.screenshot', false)
+        && config('error-sync.screenshot_editor.enabled', true)) {
+        foreach ([
+            public_path('vendor/error-sync/annotation-editor.js'),
+            $packageRoot . '/resources/js/annotation-editor.js',
+        ] as $assetPath) {
+            if (is_file($assetPath) && is_readable($assetPath)) {
+                $annotationEditorSource = file_get_contents($assetPath);
                 break;
             }
         }
@@ -23,6 +38,8 @@
     <script>
         window.__errorSyncConfig = {
             screenshot: {{ config('error-sync.collect.screenshot', false) ? 'true' : 'false' }},
+            screenshotEditor: {{ config('error-sync.screenshot_editor.enabled', true) ? 'true' : 'false' }},
+            screenshotEditorQuality: {{ (float) config('error-sync.screenshot_editor.jpeg_quality', 0.72) }},
             html2canvasUrl: '/vendor/error-sync/vendor/html2canvas.min.js',
         };
     </script>
@@ -50,6 +67,11 @@
                    box-shadow:0 4px 12px rgba(239,68,68,0.4);"
             title="Send error report with screenshot (ErrorSync)"
         >📸</button>
+    @endif
+
+    {{-- Inline the editor as well so it works in offline compiled WebViews. --}}
+    @if(config('error-sync.screenshot_editor.enabled', true) && $annotationEditorSource)
+        <script>{!! $annotationEditorSource !!}</script>
     @endif
 
     {{-- Error capture JS --}}

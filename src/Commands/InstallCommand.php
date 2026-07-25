@@ -83,6 +83,12 @@ class InstallCommand extends Command
             $this->steps[] = 'JS published: public/vendor/error-sync/error-capture.js';
         }
 
+        $annotationEditor = $packagePath . '/resources/js/annotation-editor.js';
+        if (File::exists($annotationEditor)) {
+            copy($annotationEditor, $jsDir . '/annotation-editor.js');
+            $this->steps[] = 'JS published: public/vendor/error-sync/annotation-editor.js';
+        }
+
         // Copy the html2canvas-pro compatibility build (published under the
         // historical filename to avoid breaking existing applications).
         $sourceHtml2canvas = $packagePath . '/resources/js/vendor/html2canvas.min.js';
@@ -90,7 +96,7 @@ class InstallCommand extends Command
             copy($sourceHtml2canvas, $vendorJsDir . '/html2canvas.min.js');
             $this->steps[] = 'JS published: public/vendor/error-sync/vendor/html2canvas.min.js';
         } else {
-            $this->warnings[] = 'html2canvas not found — screenshots disabled. Download it from: https://html2canvas.hertzen.com';
+            $this->warnings[] = 'Bundled html2canvas-pro asset not found — screenshots disabled';
         }
 
         // Views

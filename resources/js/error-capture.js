@@ -230,6 +230,7 @@
     // 4. User Action Tracking
     // ==========================================
     document.addEventListener('click', (e) => {
+        if (e.target.closest('#error-sync-annotation-editor')) return;
         const target = e.target.closest('button, a, input[type="submit"], [data-action], form');
         if (target) {
             post(ENDPOINTS.action, {
@@ -310,11 +311,39 @@
             // Capture screenshot FIRST
             let screenshot = null;
             if (isScreenshotEnabled()) {
-                screenshot = await captureScreenshot();
-                if (screenshot) {
+                while (true) {
+                    screenshot = await captureScreenshot();
+                    if (!screenshot) {
+                        flash('⚠️ Screenshot capture failed; sending error details only', 'warning');
+                        break;
+                    }
+
                     flash('📸 Screenshot captured!', 'info');
-                } else {
-                    flash('⚠️ Screenshot library unavailable; sending error details only', 'warning');
+                    if (!isScreenshotEditorEnabled()) break;
+
+                    const editor = window.ErrorSyncAnnotationEditor;
+                    if (!editor?.open) {
+                        screenshotDiagnostic += '; annotation editor unavailable';
+                        flash('Annotation editor unavailable; sending original screenshot', 'warning');
+                        break;
+                    }
+
+                    const editResult = await editor.open(screenshot, {
+                        quality: window.__errorSyncConfig?.screenshotEditorQuality || 0.72,
+                    });
+                    if (editResult.action === 'cancel') {
+                        flash('Screenshot report cancelled', 'warning');
+                        return;
+                    }
+                    if (editResult.action === 'retake') {
+                        flash('Retaking screenshot...', 'info');
+                        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                        continue;
+                    }
+
+                    screenshot = editResult.image;
+                    screenshotDiagnostic += `; annotations: ${editResult.annotations}`;
+                    break;
                 }
             }
             
@@ -419,6 +448,10 @@
                 }
             }, 300);
         }, 2500);
+    }
+
+    function isScreenshotEditorEnabled() {
+        return window.__errorSyncConfig?.screenshotEditor !== false;
     }
 
     function vibrate() {

@@ -14,6 +14,7 @@ Error Sync collects recent PHP and JavaScript errors, browser console messages, 
 - Console logs and recent user actions
 - Request, session, Laravel log, and database query context
 - Optional WebView screenshot capture
+- Touch- and mouse-friendly screenshot annotation with pen, highlight, arrows, boxes, text, colors, undo/redo, retake, and cancel
 - Manual capture from a floating button, shake gesture, three-finger triple tap, or keyboard shortcut
 - Local JSON and Markdown reports with configurable retention
 - Optional Python relay server for sending reports from a phone to a development machine
@@ -188,9 +189,10 @@ The collector intercepts browser errors, unhandled promise rejections, console m
 
 Screenshot capture tries these methods in order:
 
-1. `html2canvas`, when the published vendor asset is present.
+1. The bundled `html2canvas-pro` renderer, including modern Tailwind color support.
 2. `window.NativePHP.captureScreenshot()`, when exposed by the NativePHP bridge.
-3. A base64-encoded JSON snapshot containing visible text and viewport details.
+
+For user-triggered captures, the screenshot opens in a responsive annotation editor before upload. It uses Pointer Events for Android/iOS touch, stylus input, and desktop mouse input. Cancel stops the report, Retake captures the current viewport again, and Send merges the marks into the JPEG. Set `error-sync.screenshot_editor.enabled` to `false` to send captures immediately without editing.
 
 ## Artisan commands
 
@@ -302,6 +304,11 @@ return [
         'database_queries' => true,
         'cache_state' => false,
         'screenshot' => true,
+    ],
+
+    'screenshot_editor' => [
+        'enabled' => true,
+        'jpeg_quality' => 0.72,
     ],
 
     'buffer_size' => 200,

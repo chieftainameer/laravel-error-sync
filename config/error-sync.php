@@ -27,6 +27,10 @@ return [
         'cache_state' => false,
         'screenshot' => true,
     ],
+    'screenshot_editor' => [
+        'enabled' => true,
+        'jpeg_quality' => 0.72,
+    ],
     'buffer_size' => 200,
     'sensitive_fields' => [
         'password',
