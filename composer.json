@@ -1,12 +1,12 @@
 {
-    "name": "nativephp/error-sync",
+    "name": "chieftainameer/error-sync",
     "description": "Effortlessly sync mobile app errors from NativePHP to your AI coding agent",
     "type": "library",
     "license": "MIT",
     "authors": [
         {
-            "name": "Your Name",
-            "email": "you@example.com"
+            "name": "Ameer Hamza",
+            "email": "hamzabgn@yahoo.com"
         }
     ],
     "keywords": [
