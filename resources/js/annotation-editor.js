@@ -74,11 +74,7 @@
         element.textContent = label;
         element.title = title;
         element.setAttribute('aria-label', title);
-        element.style.cssText = `
-            min-width:${options.compact ? '42px' : '54px'};height:42px;padding:0 12px;
-            border:1px solid #475569;border-radius:9px;background:#1e293b;color:#f8fafc;
-            font:600 13px system-ui,sans-serif;touch-action:manipulation;cursor:pointer;
-        `;
+        element.className = `error-sync-editor-button${options.compact ? ' is-compact' : ''}${options.variant ? ` is-${options.variant}` : ''}`;
         element.addEventListener('click', onClick);
         return element;
     }
@@ -151,30 +147,81 @@
         overlay.setAttribute('aria-modal', 'true');
         overlay.setAttribute('aria-label', 'Annotate screenshot');
         overlay.style.cssText = `
-            position:fixed;inset:0;z-index:2147483647;background:#0f172a;color:#f8fafc;
-            display:flex;flex-direction:column;font-family:system-ui,sans-serif;
+            position:fixed;inset:0;width:100vw;max-width:100vw;overflow:hidden;z-index:2147483647;background:#080d18;color:#f8fafc;
+            display:flex;flex-direction:column;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
             padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
             box-sizing:border-box;overscroll-behavior:none;
         `;
 
+        const styles = document.createElement('style');
+        styles.textContent = `
+            #error-sync-annotation-editor * { box-sizing: border-box; }
+            #error-sync-annotation-editor .error-sync-editor-button {
+                min-width: 54px; height: 40px; padding: 0 13px; border: 1px solid #334155;
+                border-radius: 10px; background: #172033; color: #dbeafe;
+                font: 650 13px/1 system-ui,sans-serif; letter-spacing: .01em;
+                touch-action: manipulation; cursor: pointer; white-space: nowrap;
+                transition: background .16s ease,border-color .16s ease,transform .12s ease,box-shadow .16s ease;
+            }
+            #error-sync-annotation-editor .error-sync-editor-button:hover { background:#22304a;border-color:#4b6385; }
+            #error-sync-annotation-editor .error-sync-editor-button:active { transform:scale(.97); }
+            #error-sync-annotation-editor .error-sync-editor-button:focus-visible { outline:3px solid rgba(96,165,250,.5);outline-offset:2px; }
+            #error-sync-annotation-editor .error-sync-editor-button:disabled { cursor:default; }
+            #error-sync-annotation-editor .error-sync-editor-button.is-compact { min-width:40px;padding:0 10px; }
+            #error-sync-annotation-editor .error-sync-editor-button.is-primary { background:#2563eb;border-color:#3b82f6;color:#fff;box-shadow:0 6px 18px rgba(37,99,235,.3); }
+            #error-sync-annotation-editor .error-sync-editor-button.is-success { background:#16a34a;border-color:#22c55e;color:#fff;box-shadow:0 6px 18px rgba(22,163,74,.28); }
+            #error-sync-annotation-editor .error-sync-editor-button.is-danger { background:transparent;border-color:#475569;color:#cbd5e1; }
+            #error-sync-annotation-editor .error-sync-editor-button.is-secondary { background:#1e293b;color:#e2e8f0; }
+            #error-sync-annotation-editor .error-sync-tool-group {
+                display:flex;align-items:center;gap:6px;padding:5px;border:1px solid #26344c;
+                border-radius:13px;background:rgba(15,23,42,.82);box-shadow:inset 0 1px rgba(255,255,255,.025);
+            }
+            #error-sync-annotation-editor .error-sync-toolbar-label {
+                color:#7f91aa;font:700 10px/1 system-ui,sans-serif;text-transform:uppercase;
+                letter-spacing:.09em;padding:0 3px;white-space:nowrap;
+            }
+            #error-sync-annotation-editor .error-sync-editor-toolbar::-webkit-scrollbar { display:none; }
+            @media (max-width: 640px) {
+                #error-sync-annotation-editor .error-sync-editor-button { height:42px;padding:0 11px; }
+                #error-sync-annotation-editor .error-sync-desktop-only { display:none; }
+                #error-sync-annotation-editor .error-sync-editor-header { flex-wrap:wrap;padding:10px 12px; }
+                #error-sync-annotation-editor .error-sync-editor-title { width:100%;text-align:center; }
+                #error-sync-annotation-editor .error-sync-editor-header-actions { width:100%;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr)); }
+                #error-sync-annotation-editor .error-sync-editor-header-actions .error-sync-editor-button { width:100%; }
+            }
+        `;
+        overlay.appendChild(styles);
+
         const header = document.createElement('div');
-        header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:#111827;flex:0 0 auto;';
+        header.className = 'error-sync-editor-header';
+        header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-width:0;padding:12px 16px;background:rgba(15,23,42,.96);border-bottom:1px solid #26344c;box-shadow:0 8px 24px rgba(0,0,0,.2);flex:0 0 auto;';
+        const titleBlock = document.createElement('div');
+        titleBlock.className = 'error-sync-editor-title';
+        titleBlock.style.cssText = 'display:flex;flex-direction:column;min-width:0;';
         const title = document.createElement('strong');
-        title.textContent = 'Mark the issue';
+        title.textContent = 'Annotate screenshot';
+        title.style.cssText = 'font-size:15px;letter-spacing:-.01em;color:#f8fafc;';
+        const subtitle = document.createElement('span');
+        subtitle.className = 'error-sync-desktop-only';
+        subtitle.textContent = 'Highlight the issue before sending it to your coding agent';
+        subtitle.style.cssText = 'margin-top:3px;color:#8292aa;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+        titleBlock.append(title, subtitle);
         const headerActions = document.createElement('div');
-        headerActions.style.cssText = 'display:flex;gap:8px;';
-        header.append(title, headerActions);
+        headerActions.className = 'error-sync-editor-header-actions';
+        headerActions.style.cssText = 'display:flex;gap:8px;flex:0 0 auto;';
+        header.append(titleBlock, headerActions);
 
         const stage = document.createElement('div');
-        stage.style.cssText = 'position:relative;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px;background:#020617;overflow:hidden;';
+        stage.style.cssText = 'position:relative;width:100%;min-width:0;flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px;background-color:#080d18;background-image:linear-gradient(45deg,#0d1524 25%,transparent 25%),linear-gradient(-45deg,#0d1524 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#0d1524 75%),linear-gradient(-45deg,transparent 75%,#0d1524 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0;overflow:hidden;';
         const canvas = document.createElement('canvas');
         canvas.width = image.naturalWidth || image.width;
         canvas.height = image.naturalHeight || image.height;
-        canvas.style.cssText = 'display:block;max-width:100%;max-height:100%;width:auto;height:auto;touch-action:none;background:white;box-shadow:0 8px 30px rgba(0,0,0,.45);';
+        canvas.style.cssText = 'display:block;max-width:100%;max-height:100%;width:auto;height:auto;touch-action:none;background:white;border:1px solid rgba(148,163,184,.25);border-radius:8px;box-shadow:0 18px 50px rgba(0,0,0,.52),0 0 0 1px rgba(255,255,255,.03);';
         stage.appendChild(canvas);
 
         const toolbar = document.createElement('div');
-        toolbar.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 12px;overflow-x:auto;background:#111827;flex:0 0 auto;scrollbar-width:thin;';
+        toolbar.className = 'error-sync-editor-toolbar';
+        toolbar.style.cssText = 'display:flex;align-items:center;gap:9px;width:100%;min-width:0;max-width:100vw;padding:10px 12px;background:rgba(15,23,42,.98);border-top:1px solid #26344c;box-shadow:0 -10px 30px rgba(0,0,0,.22);overflow-x:auto;flex:0 0 auto;scrollbar-width:none;';
 
         const ctx = canvas.getContext('2d');
         const redraw = () => {
@@ -189,25 +236,36 @@
         };
 
         const toolButtons = new Map();
+        const drawingGroup = document.createElement('div');
+        drawingGroup.className = 'error-sync-tool-group';
+        const drawingLabel = document.createElement('span');
+        drawingLabel.className = 'error-sync-toolbar-label error-sync-desktop-only';
+        drawingLabel.textContent = 'Tools';
+        drawingGroup.appendChild(drawingLabel);
         const selectTool = (next) => {
             tool = next;
             toolButtons.forEach((element, name) => {
-                element.style.background = name === tool ? '#2563eb' : '#1e293b';
+                element.classList.toggle('is-primary', name === tool);
                 element.setAttribute('aria-pressed', name === tool ? 'true' : 'false');
             });
         };
         [['pen', 'Pen'], ['highlight', 'Highlight'], ['arrow', 'Arrow'], ['rectangle', 'Box'], ['text', 'Text']].forEach(([name, label]) => {
             const element = button(label, label, () => selectTool(name));
             toolButtons.set(name, element);
-            toolbar.appendChild(element);
+            drawingGroup.appendChild(element);
         });
+        toolbar.appendChild(drawingGroup);
 
         const colorGroup = document.createElement('div');
-        colorGroup.style.cssText = 'display:flex;gap:6px;padding:0 4px;';
+        colorGroup.className = 'error-sync-tool-group';
+        const colorLabel = document.createElement('span');
+        colorLabel.className = 'error-sync-toolbar-label error-sync-desktop-only';
+        colorLabel.textContent = 'Color';
+        colorGroup.appendChild(colorLabel);
         COLORS.forEach((value) => {
             const swatch = button('', `Color ${value}`, () => {
                 color = value;
-                Array.from(colorGroup.children).forEach((item) => item.style.outline = 'none');
+                Array.from(colorGroup.querySelectorAll('button')).forEach((item) => item.style.outline = 'none');
                 swatch.style.outline = '3px solid #e2e8f0';
             }, { compact: true });
             swatch.style.minWidth = '32px';
@@ -219,6 +277,12 @@
         });
         toolbar.appendChild(colorGroup);
 
+        const brushGroup = document.createElement('div');
+        brushGroup.className = 'error-sync-tool-group';
+        const brushLabel = document.createElement('span');
+        brushLabel.className = 'error-sync-toolbar-label error-sync-desktop-only';
+        brushLabel.textContent = 'Size';
+        brushGroup.appendChild(brushLabel);
         const size = document.createElement('input');
         size.type = 'range';
         size.min = '2';
@@ -226,14 +290,18 @@
         size.value = String(width);
         size.title = 'Brush size';
         size.setAttribute('aria-label', 'Brush size');
-        size.style.cssText = 'width:100px;accent-color:#3b82f6;';
+        size.style.cssText = 'width:92px;height:32px;accent-color:#3b82f6;';
         size.addEventListener('input', () => { width = Number(size.value); });
-        toolbar.appendChild(size);
+        brushGroup.appendChild(size);
+        toolbar.appendChild(brushGroup);
 
+        const historyGroup = document.createElement('div');
+        historyGroup.className = 'error-sync-tool-group';
         const undoButton = button('Undo', 'Undo', () => { history.undo(); redraw(); });
         const redoButton = button('Redo', 'Redo', () => { history.redo(); redraw(); });
         const clearButton = button('Clear', 'Clear all marks', () => { history.clear(); redraw(); });
-        toolbar.append(undoButton, redoButton, clearButton);
+        historyGroup.append(undoButton, redoButton, clearButton);
+        toolbar.appendChild(historyGroup);
 
         const finish = (result) => {
             document.removeEventListener('keydown', onKeyDown, true);
@@ -244,8 +312,8 @@
         let resolver;
         const resultPromise = new Promise((resolve) => { resolver = resolve; });
         headerActions.append(
-            button('Cancel', 'Cancel report', () => finish({ action: 'cancel' })),
-            button('Retake', 'Retake screenshot', () => finish({ action: 'retake' })),
+            button('Cancel', 'Cancel report', () => finish({ action: 'cancel' }), { variant: 'danger' }),
+            button('Retake', 'Retake screenshot', () => finish({ action: 'retake' }), { variant: 'secondary' }),
             button('Send', 'Send annotated screenshot', () => {
                 redraw();
                 finish({
@@ -253,9 +321,8 @@
                     image: history.actions.length ? canvas.toDataURL('image/jpeg', jpegQuality) : dataUri,
                     annotations: history.actions.length,
                 });
-            })
+            }, { variant: 'success' })
         );
-        headerActions.lastElementChild.style.background = '#16a34a';
 
         const begin = (event) => {
             if (event.pointerType === 'mouse' && event.button !== 0) return;
